@@ -51,7 +51,7 @@ char buffer2[100];
 
 // Connect to the WiFi
 const char* ssid = "GuggenbergerLinux";
-const char* password = "Isabelle2014samira";
+const char* password = "xxx";
 const char* mqtt_server = "192.168.150.1";
 
 ///////////////////////////////////////////////////////////////////////////
