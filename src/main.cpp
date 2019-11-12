@@ -7,52 +7,25 @@ PINOUT Wemos D1 -> https://bre.is/9H5nddhG
 #include <SPI.h>
 #include <ESP8266WiFi.h> 
 #include <PubSubClient.h>  
-#include <DallasTemperature.h>
-#include <OneWire.h>
-
-
 
 ////////////////////////////////////////////////////////////////////// PCF8574 Adresse
 PCF8574 pcf8574(0x20);
+////////////////////////////////////////////////////////////////////// Der nächste PCF8574
 //PCF8574 pcf8574_2(0x21);
+// Beachter die Adressjumper auf dem PCF8574
 
-
-///////////////////////////////////////////////////////////////////// WIRE Bus
-#define ONE_WIRE_BUS D1
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-/////////////////////////////////////////////////////////////////////////// mqtt
-
-///////////////////////////////////////////////////////////////////// DS18B20 ansteuern
-
-DeviceAddress Thermometer;
-int deviceCount = 0;
-float tempC; 
-String dataString = "";
-/////////////////////////////////////////////////////////////////////
-
-// Kartendaten
-const char* kartenID = "WIFI_Sensor_XX";
+////////////////////////////////////////////////////////////////////// Kartendaten
+const char* kartenID = "WIFI_Relaiskarte_XXX";
 char mqtt_text[10];
 
 /////////////////////////////////////////////////////////////////////////// Wifi einrichten
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-/////////////////////////////////////////////////////////////////////////// Intervall der Steuerung
-unsigned long previousMillis_Temperatur = 0;
-unsigned long interval_Temperatur = 30000; 
-///////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////// Variablen sonstige
-char buffer1[100];
-char buffer2[100];
-/////////////////////////////////////////////////////////////////////
-
 // Connect to the WiFi
-const char* ssid = "GuggenbergerLinux";
-const char* password = "xxx";
-const char* mqtt_server = "192.168.150.1";
+const char* ssid = "SSID";
+const char* password = "PASS";
+const char* mqtt_server = "IPtoMQTT";
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -67,7 +40,7 @@ void reconnect() {
     Serial.print(mqtt_server);
     Serial.println("");
     // Create a random client ID
-    String clientId = "Wifi-Tastenerkennung-";
+    String clientId = "Wifi-Relaiskarte-";
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
     if (client.connect(clientId.c_str())) {
@@ -95,16 +68,6 @@ void setup() {
 /////////////////////////////////////////////////////////////////////////// mqtt Server
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-
-/////////////////////////////////////////////////////////////////////////// Sensor Start
-  sensors.begin();
-  Serial.println("Locating devices...");
-  Serial.print("Found ");
-  deviceCount = sensors.getDeviceCount();
-  Serial.print(deviceCount, DEC);
-  Serial.println(" devices.");
-  Serial.println("");
-///////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////// Konfig Relais
   pcf8574.pinMode(P0, OUTPUT);
@@ -158,43 +121,6 @@ pcf8574.digitalWrite(P7, !LOW);
 
 }
 
-//************************************************************************* Wire Adresse ausgeben 
-void printAddress(DeviceAddress deviceAddress)
-{ 
-  Serial.println("Adresse Temp. auslesen");
-  dataString = "WIFI_Sensor_01/Temperatur/";
-  for (uint8_t i = 0; i < 8; i++)
-  {
-    if (deviceAddress[i] < 0x10) dataString += String("0");
-    Serial.print(deviceAddress[i], HEX);
-    dataString += String(deviceAddress[i], HEX);
-    if (i < 7) Serial.print("_");
-    dataString += String("_");
-  }
-  dataString += String("/");
-  Serial.println("");
-}
-
-/////////////////////////////////////////////////////////////////////////// Temp auslesen
-void temperaturAUSLESEN(void){
-Serial.println("Temperatur auslesen");
-    for (int i = 0;  i < deviceCount;  i++)
-  {
-    sensors.requestTemperatures();
-    sensors.getAddress(Thermometer, i);
-    printAddress(Thermometer);
-
-    tempC = sensors.getTempCByIndex(i);
-
-//////////////////////////////////////////////////////////////////////////// Ausgaben auf mqtt
-    dtostrf(tempC,2, 1, buffer2); 
-    char topic[100];
-    dataString.toCharArray(topic, sizeof(topic));
-    client.publish(topic, buffer2); 
-
-  }
-
-}
 
 //****************************************************************************************** VOID LOOP
 void loop()
@@ -204,18 +130,6 @@ void loop()
       reconnect();
     }
     client.loop();  
-
-/*
-  ///////////////////////////////////////////////////////////////////////// Daten schreiben im Intervall Temperatur
-  if (millis() - previousMillis_Temperatur > interval_Temperatur) {
-
-      previousMillis_Temperatur = millis();   // aktuelle Zeit abspeichern
- 
-   // Temperatur auslesen
-   temperaturAUSLESEN();
-    }
-*/
-
 
 pcf8574.digitalWrite(P0, !LOW);
 pcf8574.digitalWrite(P1, !LOW);
